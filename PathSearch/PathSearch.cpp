@@ -1,7 +1,10 @@
 #include "PathSearch.h"
 #include <iostream>
 namespace fullsail_ai { namespace algorithms {
-
+#define VISITED_COLOR  0xFF0000FF    // Red with full luminance
+#define OPEN_COLOR    0xFF00FF00    // Green with full luminance
+#define PATH_COLOR    0xFFFF0000    // Blue with full luminance
+#define CURRENT_COLOR 0xFFFFFF00    // Yellow with full luminance
 	PathSearch::PathSearch()
 	{
 	}
@@ -11,13 +14,11 @@ namespace fullsail_ai { namespace algorithms {
 	}
     void PathSearch::buildSearchGraph()
     {
-        // Clear existing graph
         for (auto& pair : nodes) {
             delete pair.second;
         }
         nodes.clear();
 
-        // Build nodes for each valid tile
         for (int row = 0; row < tileMap->getRowCount(); row++) {
             for (int col = 0; col < tileMap->getColumnCount(); col++) {
                 Tile* tile = tileMap->getTile(row, col);
@@ -29,15 +30,12 @@ namespace fullsail_ai { namespace algorithms {
             }
         }
 
-        // Connect neighbors
         for (auto& pair : nodes) {
             Tile* tile = pair.first;
             SearchNode* node = pair.second;
 
-            // Get valid neighbors for this tile
             std::vector<Tile*> neighborTiles = getValidNeighbors(tile);
 
-            // Connect to neighbor nodes
             for (Tile* neighborTile : neighborTiles) {
                 auto it = nodes.find(neighborTile);
                 if (it != nodes.end()) {
@@ -72,17 +70,110 @@ namespace fullsail_ai { namespace algorithms {
       //  outputSearchGraph();
 	}
 
-	void PathSearch::enter(int startRow, int startColumn, int goalRow, int goalColumn)
-	{
-	}
+    void PathSearch::enter(int startRow, int startColumn, int goalRow, int goalColumn)
+    {
+        while (!openList.empty()) {
+            openList.pop();
+        }
+        visited.clear();
+        pathFound = false;
 
-	void PathSearch::update(long timeslice)
-	{
-	}
+        Tile* startTile = tileMap->getTile(startRow, startColumn);
+        goalTile = tileMap->getTile(goalRow, goalColumn);
 
-	void PathSearch::exit()
-	{
-	}
+        if (!startTile || !goalTile ||
+            startTile->getWeight() == 0 ||
+            goalTile->getWeight() == 0) {
+            return;
+        }
+
+        auto startNodeIt = nodes.find(startTile);
+        if (startNodeIt == nodes.end()) return;
+
+        PlannerNode* start = new PlannerNode();
+        start->searchNode = startNodeIt->second;
+        start->parent = nullptr;
+
+        openList.push(start);
+        visited[startNodeIt->second] = start;
+
+        startTile->setFill(OPEN_COLOR);
+    }
+    std::vector<Tile const*> PathSearch::reconstructPath(PlannerNode* goalNode) const
+    {
+        std::vector<Tile const*> path;
+        PlannerNode* current = goalNode;
+
+        while (current != nullptr) {
+            path.push_back(current->searchNode->tile);
+            current = current->parent;
+        }
+
+        std::reverse(path.begin(), path.end());
+        return path;
+    }
+
+    void PathSearch::update(long timeslice)
+    {
+        if (pathFound || openList.empty()) return;
+
+        PlannerNode* current = openList.front();
+        openList.pop();
+
+        // Visual debugging - mark as visited
+        current->searchNode->tile->setFill(VISITED_COLOR);
+
+        auto currentPath = reconstructPath(current);
+        for (size_t i = 0; i < currentPath.size() - 1; ++i) {
+            const_cast<Tile*>(currentPath[i])->addLineTo(
+                const_cast<Tile*>(currentPath[i + 1]),
+                VISITED_COLOR  // Using red color for the current path
+            );
+        }
+
+        if (current->searchNode->tile == goalTile) {
+            pathFound = true;
+            auto path = reconstructPath(current);
+
+            for (size_t i = 0; i < path.size(); ++i) {
+                const_cast<Tile*>(path[i])->setFill(PATH_COLOR);
+
+                if (i < path.size() - 1) {
+                    const_cast<Tile*>(path[i])->addLineTo(
+                        const_cast<Tile*>(path[i + 1]),
+                        PATH_COLOR
+                    );
+                }
+            }
+            return;
+        }
+
+        for (SearchNode* neighborNode : current->searchNode->neighbors) {
+            if (visited.find(neighborNode) != visited.end()) {
+                continue;
+            }
+
+            PlannerNode* newNode = new PlannerNode();
+            newNode->searchNode = neighborNode;
+            newNode->parent = current;
+
+            openList.push(newNode);
+            visited[neighborNode] = newNode;
+
+            neighborNode->tile->setFill(OPEN_COLOR);
+
+        }
+    }
+    void PathSearch::exit()
+    {
+        while (!openList.empty()) {
+            delete openList.front();
+            openList.pop();
+        }
+
+        pathFound = false;
+        goalTile = nullptr;
+    }
     void PathSearch::addNeighborsFromDirections(Tile* tile, const std::pair<int, int>* directions,
         int directionCount, std::vector<Tile*>& neighbors)
     {
@@ -104,9 +195,7 @@ namespace fullsail_ai { namespace algorithms {
         std::vector<Tile*> neighbors;
         int row = tile->getRow();
 
-        // Define directions based on row parity (even/odd)
         if (row % 2 == 0) {
-            // Directions for even rows
             const std::pair<int, int> directions[] = {
                 {-1, -1}, // top-left
                 {-1, 0},  // top-right
@@ -118,7 +207,6 @@ namespace fullsail_ai { namespace algorithms {
             addNeighborsFromDirections(tile, directions, 6, neighbors);
         }
         else {
-            // Directions for odd rows
             const std::pair<int, int> directions[] = {
                 {-1, 0},  // top-left
                 {-1, 1},  // top-right
@@ -135,24 +223,35 @@ namespace fullsail_ai { namespace algorithms {
 
     void PathSearch::shutdown()
     {
-        // Clean up the graph
         for (auto& pair : nodes) {
             delete pair.second;
         }
         nodes.clear();
+
+        for (auto& pair : visited) {
+            delete pair.second;
+        }
         visited.clear();
+
         tileMap = nullptr;
+        goalTile = nullptr;
+        pathFound = false;
     }
 
-	bool PathSearch::isDone() const
-	{
-		return true;
-	}
 
-	std::vector<Tile const*> const PathSearch::getSolution() const
-	{
-		std::vector<Tile const*> temp;
-		return temp;
-	}
+    bool PathSearch::isDone() const
+    {
+        return pathFound || openList.empty();
+    }
+
+    std::vector<Tile const*> const PathSearch::getSolution() const
+    {
+        if (!pathFound) return std::vector<Tile const*>();
+
+        auto goalNodeIt = visited.find(nodes.at(goalTile));
+        if (goalNodeIt == visited.end()) return std::vector<Tile const*>();
+
+        return reconstructPath(goalNodeIt->second);
+    }
 }}  // namespace fullsail_ai::algorithms
 

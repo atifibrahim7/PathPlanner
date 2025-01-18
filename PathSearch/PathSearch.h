@@ -29,7 +29,7 @@
 #include "../TileSystem/TileMap.h"
 #include "../platform.h"
 #include "../PriorityQueue.h"
-
+#include <queue>
 namespace fullsail_ai { namespace algorithms {
 
 	class PathSearch
@@ -56,12 +56,15 @@ namespace fullsail_ai { namespace algorithms {
 		//TODO: Add other supporting variables and functions
 		SearchNode* startNode;
 		SearchNode* goalNode;
-
+		std::queue<PlannerNode*> openList;  // For BFS queue
+		Tile* goalTile;                     // To store goal tile
+		bool pathFound;
 		void buildSearchGraph();
 		std::vector<Tile*> getValidNeighbors(Tile* tile);
 		void addNeighborsFromDirections(Tile* tile, const std::pair<int, int>* directions,
 			int directionCount, std::vector<Tile*>& neighbors);
 		void outputSearchGraph() const; // For debugging purposes
+		std::vector<Tile const*> reconstructPath(PlannerNode* goalNode) const;
 	public:
 		//! \brief Default constructor.
 		DLLEXPORT PathSearch();
