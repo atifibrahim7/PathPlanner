@@ -54,7 +54,14 @@ namespace fullsail_ai { namespace algorithms {
 
 		TileMap* tileMap;
 		//TODO: Add other supporting variables and functions
+		SearchNode* startNode;
+		SearchNode* goalNode;
 
+		void buildSearchGraph();
+		std::vector<Tile*> getValidNeighbors(Tile* tile);
+		void addNeighborsFromDirections(Tile* tile, const std::pair<int, int>* directions,
+			int directionCount, std::vector<Tile*>& neighbors);
+		void outputSearchGraph() const; // For debugging purposes
 	public:
 		//! \brief Default constructor.
 		DLLEXPORT PathSearch();
