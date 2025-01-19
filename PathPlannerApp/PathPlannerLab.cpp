@@ -2894,7 +2894,7 @@ void BindStdHandlesToConsole()
 	std::wcin.clear();
 	std::cin.clear();
 }
-
+#include <crtdbg.h>
 int APIENTRY _tWinMain(HINSTANCE application_handle,
                        HINSTANCE previous_application_handle,
                        LPTSTR    command_line,
@@ -2902,11 +2902,10 @@ int APIENTRY _tWinMain(HINSTANCE application_handle,
 {
 	UNREFERENCED_PARAMETER(previous_application_handle);
 	UNREFERENCED_PARAMETER(command_line);
-
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 //#ifdef _DEBUG
 	// Set up the console window.
 	CONSOLE_SCREEN_BUFFER_INFO coninfo;
-
 	AllocConsole();
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
 	coninfo.dwSize.Y = 500;
