@@ -30,6 +30,7 @@
 #include "../platform.h"
 #include "../PriorityQueue.h"
 #include <queue>
+#include <cmath> 
 namespace fullsail_ai { namespace algorithms {
 
 	class PathSearch
@@ -45,10 +46,23 @@ namespace fullsail_ai { namespace algorithms {
 		{
 			SearchNode* searchNode;
 			PlannerNode* parent;
-
+			float heuristic;
+			float cost; ;
 			//TODO: Add cost variables for whichever search you are currently working on
+			bool operator>(const PlannerNode& other) const {
+				// Pure greedy behavior - only consider heuristic
+				if (std::abs(heuristic - other.heuristic) > 0.001f) {
+					return heuristic > other.heuristic;
+				}
+				// Break ties with path cost
+				return cost > other.cost;
+			}
 		};
-
+		struct PlannerNodeCompare {
+			bool operator()(PlannerNode* a, PlannerNode* b) {
+				return a->heuristic > b->heuristic;
+			}
+		};
 		std::unordered_map<Tile*, SearchNode*> nodes;
 		std::unordered_map<SearchNode*, PlannerNode*> visited;
 
@@ -56,7 +70,9 @@ namespace fullsail_ai { namespace algorithms {
 		//TODO: Add other supporting variables and functions
 		SearchNode* startNode;
 		SearchNode* goalNode;
-		std::queue<PlannerNode*> openList;  // For BFS queue
+		std::priority_queue<PlannerNode*,
+			std::vector<PlannerNode*>,
+			PlannerNodeCompare> openList;
 		Tile* goalTile;                     // To store goal tile
 		bool pathFound;
 		void buildSearchGraph();
@@ -65,6 +81,8 @@ namespace fullsail_ai { namespace algorithms {
 			int directionCount, std::vector<Tile*>& neighbors);
 		void outputSearchGraph() const; // For debugging purposes
 		std::vector<Tile const*> reconstructPath(PlannerNode* goalNode) const;
+	private:
+		float calculateHeuristic(const Tile* current, const Tile* goal) const;
 	public:
 		//! \brief Default constructor.
 		DLLEXPORT PathSearch();
