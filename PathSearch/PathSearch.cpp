@@ -93,8 +93,8 @@ namespace fullsail_ai { namespace algorithms {
         PlannerNode* start = new PlannerNode();
         start->searchNode = startNodeIt->second;
         start->parent = nullptr;
-        start->cost = 0;
-        start->heuristic = calculateHeuristic(startTile, goalTile);
+        start->cost = 0;  // Initial cost is 0
+        start->heuristic = 0;  
 
         openList.push(start);
         visited[startNodeIt->second] = start;
@@ -117,11 +117,7 @@ namespace fullsail_ai { namespace algorithms {
     void PathSearch::update(long timeslice) {
         if (pathFound || openList.empty()) return;
 
-       
-
         while (!openList.empty()) {
-            
-
             PlannerNode* current = openList.top();
             openList.pop();
 
@@ -150,18 +146,16 @@ namespace fullsail_ai { namespace algorithms {
 
             for (SearchNode* neighbor : current->searchNode->neighbors) {
                 float newCost = current->cost +
-                    current->searchNode->tile->getWeight() *
-                    neighbor->tile->getWeight();
+                    (current->searchNode->tile->getWeight() * neighbor->tile->getWeight());
 
                 auto visitedIt = visited.find(neighbor);
-                if (visitedIt == visited.end() ||
-                    newCost < visitedIt->second->cost) {
 
+                if (visitedIt == visited.end() || newCost < visitedIt->second->cost) {
                     PlannerNode* newNode = new PlannerNode();
                     newNode->searchNode = neighbor;
                     newNode->parent = current;
                     newNode->cost = newCost;
-                    newNode->heuristic = calculateHeuristic(neighbor->tile, goalTile);
+                    newNode->heuristic = 0; // Not used in Uniform Cost Search
 
                     openList.push(newNode);
                     visited[neighbor] = newNode;
@@ -170,7 +164,6 @@ namespace fullsail_ai { namespace algorithms {
             }
         }
     }
-
 
     void PathSearch::exit() {
         while (!openList.empty()) {
@@ -187,17 +180,7 @@ namespace fullsail_ai { namespace algorithms {
         pathFound = false;
         goalTile = nullptr;
 
-        if (tileMap) {
-            for (int row = 0; row < tileMap->getRowCount(); row++) {
-                for (int col = 0; col < tileMap->getColumnCount(); col++) {
-                    Tile* tile = tileMap->getTile(row, col);
-                    if (tile && tile->getWeight() > 0) {
-                        tile->clearLines(); 
-                        tile->setFill(0);   
-                    }
-                }
-            }
-        }
+        
     }
     void PathSearch::addNeighborsFromDirections(Tile* tile, const std::pair<int, int>* directions,
         int directionCount, std::vector<Tile*>& neighbors)
@@ -258,15 +241,13 @@ namespace fullsail_ai { namespace algorithms {
 
         visited.clear();
 
-        tileMap = nullptr;
-        goalTile = nullptr;
         pathFound = false;
     }
 
 
     bool PathSearch::isDone() const
     {
-        return pathFound || openList.empty();
+        return false; 
     }
 
     std::vector<Tile const*> const PathSearch::getSolution() const {

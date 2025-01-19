@@ -50,17 +50,13 @@ namespace fullsail_ai { namespace algorithms {
 			float cost; ;
 			//TODO: Add cost variables for whichever search you are currently working on
 			bool operator>(const PlannerNode& other) const {
-				// Pure greedy behavior - only consider heuristic
-				if (std::abs(heuristic - other.heuristic) > 0.001f) {
-					return heuristic > other.heuristic;
-				}
-				// Break ties with path cost
+				// For Uniform Cost Search, we only consider the path cost
 				return cost > other.cost;
 			}
 		};
 		struct PlannerNodeCompare {
 			bool operator()(PlannerNode* a, PlannerNode* b) {
-				return a->heuristic > b->heuristic;
+				return a->cost > b->cost;
 			}
 		};
 		std::unordered_map<Tile*, SearchNode*> nodes;
